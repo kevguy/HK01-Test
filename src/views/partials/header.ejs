@@ -1,0 +1,31 @@
+<header class="mdl-layout__header">
+  <div class="mdl-layout__header-row">
+    <!-- Title -->
+    <span class="mdl-layout-title"><%= __("kev-msg") %> Url: <%= rootUrl %> <%= originUrl %> </span>
+    <!-- Add spacer, to align navigation to the right -->
+    <div class="mdl-layout-spacer"></div>
+    <!-- Navigation. We hide it in small screens. -->
+    <nav class="mdl-navigation mdl-layout--large-screen-only">
+      <a class="mdl-navigation__link" href="<%= rootUrl %>"><%= __("home") %></a>
+      <a class="mdl-navigation__link" href="<%= rootUrl %>/<%= chosenLang %>/make-payment/order"><%= __("make-a-payment") %></a>
+      <a class="mdl-navigation__link" href="<%= rootUrl %>/<%= chosenLang %>/check-order/search"><%= __("check-payment") %></a>
+      <a class="mdl-navigation__link" href="https://github.com/kevguy">Github</a>
+      <a class="mdl-navigation__link" href="https://stackoverflow.com/users/5836921/kevguy">StackOverflow</a>
+      <a class="mdl-navigation__link" href="<%= enUrl %>">En</a>
+      <a class="mdl-navigation__link" href="<%= zhUrl %>">ZH HK</a>
+    </nav>
+    <button id="demo-menu-lower-right"
+            class="mdl-button mdl-js-button mdl-button--icon">
+      <i class="material-icons">more_vert</i>
+    </button>
+
+    <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect"
+        for="demo-menu-lower-right">
+      <li class="mdl-menu__item">Some Action</li>
+      <li class="mdl-menu__item">Another Action</li>
+      <li disabled class="mdl-menu__item">Email Me</li>
+      <li class="mdl-menu__item">Help</li>
+    </ul>
+  </div>
+
+</header>

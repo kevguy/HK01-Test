@@ -1,0 +1,23 @@
+{
+	"kev-msg": "Intro",
+	"kev": "Intro",
+	"order": "Order",
+	"payment": "Payment",
+	"home": "Home",
+	"make-a-payment": "Make A Payment",
+	"check-payment": "Check Payment",
+	"name": "Name",
+	"reference-no": "Reference No.",
+	"search": "Search",
+	"phone": "Phone",
+	"currency": "Currency",
+	"price": "Price",
+	"card-holder-name": "Card Holder Name",
+	"credit-card-number": "Credit Card No.",
+	"expire-month": "Expir. Month",
+	"expire-year": "Expir. Year",
+	"message": "Message",
+	"close": "Close",
+	"check-your-order-here": "Check your order here:",
+	"make-your-order-here": "Make your order here:"
+}

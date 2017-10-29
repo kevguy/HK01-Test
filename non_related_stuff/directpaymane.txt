@@ -1,0 +1,89 @@
+curl https://api-3t.sandbox.paypal.com/nvp \
+  --insecure  \
+  -d VERSION=56.0 \
+  -d SIGNATURE=AEXy-7etBVzfsyWvVj2Q9jqoVg3dAZA5CkeVn4Dt.dRzPXV2Ps6Lccpb \
+  -d USER=kevlai22-2_api1.uw.edu \
+  -d PWD=WG8AG6Y62DJPH52L \
+  -d METHOD=DoDirectPayment \
+  -d PAYMENTACTION=Sale \
+  -d IPADDRESS=192.168.0.1 \
+  -d AMT=8.88 \
+  -d CREDITCARDTYPE=Visa \
+  -d ACCT=4571338849742676 \
+  -d EXPDATE=112022 \
+  -d CVV2=000 \
+  -d FIRSTNAME=John \
+  -d LASTNAME=Smith \
+  -d STREET="1 Main St." \
+  -d CITY="San Jose" \
+  -d STATE=CA \
+  -d ZIP=95131 \
+  -d COUNTRYCODE=US
+
+curl https://api-3t.sandbox.paypal.com/nvp \
+  -s \
+  --insecure \
+  -d USER=kevlai22-2_api1.uw.edu \
+  -d PWD=WG8AG6Y62DJPH52L \
+  -d SIGNATURE=AEXy-7etBVzfsyWvVj2Q9jqoVg3dAZA5CkeVn4Dt.dRzPXV2Ps6Lccpb \
+  -d METHOD=GetTransactionDetails \
+  -d VERSION=78 \
+  -d TransactionID=08P32454TS514583H
+
+
+RECEIVERBUSINESS=kevlai22%2d2%40uw%2eedu&RECEIVEREMAIL=kevlai22%2d2%40uw%2eedu&RECEIVERID=GK2A6964DBHBJ&PAYERID=LVUT9HVCQBR58&PAYERSTATUS=unverified&COUNTRYCODE=US&ADDRESSOWNER=PayPal&ADDRESSSTATUS=None&SALESTAX=0%2e00&SHIPAMOUNT=0%2e00&SHIPHANDLEAMOUNT=0%2e00&GIFTRECEIPT=0&TIMESTAMP=2017%2d10%2d28T12%3a10%3a06Z&CORRELATIONID=67d72b43533f7&ACK=Success&VERSION=78&BUILD=39206242&FIRSTNAME=John&LASTNAME=Smith&TRANSACTIONID=08P32454TS514583H&RECEIPTID=0313%2d0453%2d8436%2d3609&TRANSACTIONTYPE=pro_api&PAYMENTTYPE=instant&ORDERTIME=2017%2d10%2d28T12%3a02%3a39Z&AMT=8%2e88&FEEAMT=0%2e65&TAXAMT=0%2e00&CURRENCYCODE=USD&PAYMENTSTATUS=Completed&PENDINGREASON=None&REASONCODE=None&PROTECTIONELIGIBILITY=Ineligible&PROTECTIONELIGIBILITYTYPE=None&L_QTY0=1&L_TAXAMT0=0%2e00&L_SHIPPINGAMT0=0%2e00&L_HANDLINGAMT0=0%2e00&L_CURRENCYCODE0=USD&L_AMT0=8%2e88&INSURANCEOPTIONSELECTED=0&SHIPPINGOPTIONISDEFAULT=0
+
+  /**
+   * Braintree Example
+   * CVV must be 4 digits for American Express and 3 digits for other card types.
+   * const saleRequest = {
+   *   amount: '8.88',
+   *   creditCard: {
+   *     number: '378282246310005',
+   *     cvv: '0000',
+   *     expirationDate: '01/22'
+   *   },
+   *   options: {
+   *     submitForSettlement: true
+   *   }
+   * };
+   */
+
+
+for checking
+
+shit
+704b1600-bab7-11e7-b2d5-0bccf5e29ce5
+
+cdsvfdsvacasc
+00c2b1c0-ba7c-11e7-929d-479019178c34
+
+
+
+Braintree (success)
+Test Value	Card Type
+378282246310005	American Express // 4 digits CCV
+371449635398431	American Express // 4 digits CCV
+36259600000004	Diners Club // 3 digits CCV
+6011111111111117	Discover // 3 digits CCV
+3530111333300000	JCB // 3 digits CCV
+6304000000000000	Maestro // Merchant account does not support payment instrument. Credit card type is not accepted by this merchant account. CVV must be 4 digits for American Express and 3 digits for other card types.
+5555555555554444	Mastercard // 3 digits CCV
+2223000048400011	Mastercard // 3 digits CCV
+4111111111111111	Visa // 3 digits CCV
+4005519200000004	Visa // 3 digits CCV
+4009348888881881	Visa // 3 digits CCV
+4012000033330026	Visa // 3 digits CCV
+4012000077777777	Visa // 3 digits CCV
+4012888888881881	Visa // 3 digits CCV
+4217651111111119	Visa // 3 digits CCV
+4500600000000061	Visa // 3 digits CCV
+
+Braintree (fail)
+Test Value	Card Type	Verification Response Message
+4000111111111115	Visa	processor declined  CVV must be 4 digits for American Express and 3 digits for other card types.
+5105105105105100	Mastercard	processor declined
+// 378734493671000	American Express	processor declined
+6011000990139424	Discover	processor declined
+38520000009814	Diners Club	processor declined
+3566002020360505	JCB	failed (3000)

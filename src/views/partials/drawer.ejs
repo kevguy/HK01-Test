@@ -1,0 +1,11 @@
+<div class="mdl-layout__drawer">
+  <span class="mdl-layout-title"><%= __("kev-msg") %></span>
+  <menu-vue></menu-vue>
+  <nav class="mdl-navigation navigation-drawer">
+	  <a class="mdl-navigation__link mdl-menu__item--full-bleed-divider" href="<%= rootUrl %>"><i class="material-icons">home</i><%= __("home") %></a>
+    <a class="mdl-navigation__link" href="<%= rootUrl %>/<%= chosenLang %>/make-payment/order"><%= __("make-a-payment") %></a>
+    <a class="mdl-navigation__link mdl-menu__item--full-bleed-divider" href="<%= rootUrl %>/<%= chosenLang %>/check-order/search"><%= __("check-payment") %></a>
+    <a class="mdl-navigation__link" href="https://github.com/kevguy"><i class="material-icons">code</i>Github</a>
+    <a class="mdl-navigation__link" href="https://stackoverflow.com/users/5836921/kevguy"><i class="material-icons">code</i>StackOverflow</a>
+  </nav>
+</div>

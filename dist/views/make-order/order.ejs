@@ -1,0 +1,32 @@
+<%- layout('../partials/layout') %>
+<!-- Always shows a header, even in smaller screens. -->
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header" id="app">
+  <% include ../partials/header %>
+
+  <% include ../partials/drawer %>
+
+
+	<main class="mdl-layout__content">
+		<div class="page-content"><!-- Your content goes here -->
+    </div>
+
+    <div id="load-complete" class="mdl-js-snackbar mdl-snackbar">
+      <div class="mdl-snackbar__text"></div>
+      <button class="mdl-snackbar__action" type="button"></button>
+    </div>
+
+    <dialog class="mdl-dialog" id="modal-example">
+        <div class="mdl-dialog__content">
+            <p>
+                This is an example of the MDL Dialog being used as a modal.
+                It is using the full width action design intended for use with buttons
+                that do not fit within the specified <a href="https://www.google.com/design/spec/components/dialogs.html#dialogs-specs">length metrics</a>.
+            </p>
+        </div>
+        <div class="mdl-dialog__actions mdl-dialog__actions--full-width">
+            <button type="button" class="mdl-button">Close</button>
+            <button type="button" class="mdl-button" disabled>Inactive action</button>
+        </div>
+    </dialog>
+  </main>
+</div>

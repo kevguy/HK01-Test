@@ -1,0 +1,19 @@
+'use strict';require('ts-jest').install();"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const supertest = require("supertest");
+const request = supertest('http://localhost:4000');
+describe('GET /en/make-payment/order', () => {
+    it('should return 200 OK', () => {
+        request
+            .get('/en/make-payment/order')
+            .expect(200);
+    });
+});
+describe('GET /zh-hk/make-payment/order', () => {
+    it('should return 200 OK', () => {
+        request
+            .get('/zh-hk/make-payment/order')
+            .expect(200);
+    });
+});
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibWFrZVBheW1lbnQudGVzdC5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbImZpbGU6Ly8vL2hvbWUva2V2L0hLMDEvSEswMS1UZXN0L3Rlc3QvbWFrZVBheW1lbnQudGVzdC50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOztBQUNBLHVDQUF1QztBQUV2QyxNQUFNLE9BQU8sR0FBRyxTQUFTLENBQUMsdUJBQXVCLENBQUMsQ0FBQztBQUVuRCxRQUFRLENBQUMsNEJBQTRCLEVBQUUsR0FBRyxFQUFFO0lBQzFDLEVBQUUsQ0FBQyxzQkFBc0IsRUFBRSxHQUFHLEVBQUU7UUFDOUIsT0FBTzthQUNKLEdBQUcsQ0FBQyx3QkFBd0IsQ0FBQzthQUM3QixNQUFNLENBQUMsR0FBRyxDQUFDLENBQUM7SUFDakIsQ0FBQyxDQUFDLENBQUM7QUFDTCxDQUFDLENBQUMsQ0FBQztBQUVILFFBQVEsQ0FBQywrQkFBK0IsRUFBRSxHQUFHLEVBQUU7SUFDN0MsRUFBRSxDQUFDLHNCQUFzQixFQUFFLEdBQUcsRUFBRTtRQUM5QixPQUFPO2FBQ0osR0FBRyxDQUFDLDJCQUEyQixDQUFDO2FBQ2hDLE1BQU0sQ0FBQyxHQUFHLENBQUMsQ0FBQztJQUNqQixDQUFDLENBQUMsQ0FBQztBQUNMLENBQUMsQ0FBQyxDQUFDIn0=

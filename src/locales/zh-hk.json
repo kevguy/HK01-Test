@@ -1,0 +1,23 @@
+{
+	"kev-msg": "簡介",
+	"kev": "簡介",
+	"order": "落單",
+	"payment": "付款",
+	"home": "主頁",
+	"make-a-payment": "進行付款",
+	"check-payment": "查詢付款",
+	"name": "名字",
+	"reference-no": "索引號碼",
+	"search": "搜尋",
+	"phone": "電話",
+	"currency": "貨幣",
+	"price": "金額",
+	"card-holder-name": "持卡人",
+	"credit-card-number": "信用卡號碼",
+	"expire-month": "到期月份",
+	"expire-year": "到期年份",
+	"message": "訊息",
+	"close": "關閉",
+	"check-your-order-here": "在此查詢付款:",
+	"make-your-order-here": "在此進行付款:"
+}

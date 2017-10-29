@@ -1,0 +1,81 @@
+'use strict';require('ts-jest').install();"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const supertest = require("supertest");
+const request = supertest('http://localhost:4000');
+describe('GET /en/check-order/search', () => {
+    it('should return 200 OK', () => {
+        return request
+            .get('/en/check-order/search')
+            .expect(200);
+    });
+});
+describe('GET /zh-hk/check-order/search', () => {
+    it('should return 200 OK', () => {
+        return request
+            .get('/zh-hk/check-order/search')
+            .expect(200);
+    });
+});
+describe('GET /en/check-order/send-query', () => {
+    // sdvsdvd
+    // ec3ce6c0-bbad-11e7-91d8-db9c77e66874
+    /*
+    .post('/api/book/save/')
+                  .type('form')
+                  .send(data.book)
+                  .set('Accept', /application\/json/)
+                  .expect(201)
+                  .end(function (err, res) { done(); });
+    */
+    it('should return good reuslt', (done) => {
+        return request.post('/en/check-order/send-query')
+            .send(JSON.stringify({
+            name: 'sdvsdvd',
+            referenceNo: 'ec3ce6c0-bbad-11e7-91d8-db9c77e66874'
+        }))
+            .set('Accept', /application\/json/)
+            .expect(200)
+            .end((err, res) => {
+            console.log(res);
+            done();
+        });
+        // .then((response) => {
+        //   console.log(response);
+        //   expect(response).toBe('success');
+        // });
+    });
+});
+//
+// const todo1: CreateTodoEntity = {text: 'foo'};
+// 		const todo2: CreateTodoEntity = {text: 'foo2'};
+// 		let createdTodo1: TodoEntity;
+// 		let createdTodo2: TodoEntity;
+// 		let updatedTodo: TodoEntity;
+//
+// 		return Promise.all([
+// 			client.post(TODOS_PATH).send(todo1).expect(200),
+// 			client.post(TODOS_PATH).send(todo2).expect(200)
+// 		])
+// 			.then(
+// 				([response1, response2]: Response[]) => {
+// 					createdTodo1 = response1.body;
+// 					createdTodo2 = response2.body;
+//
+// 					expect(createdTodo1.id).toBeDefined();
+// 					expect(createdTodo1.text).toBe(todo1.text);
+// 					expect(createdTodo2.id).toBeDefined();
+// 					expect(createdTodo2.text).toBe(todo2.text);
+//
+// 					return client.get(TODOS_PATH).expect(200);
+// 				})
+// 			.then(
+// 				(findResponse: Response) => {
+// 					const todos: TodoEntity[] = findResponse.body;
+//
+// 					expect(todos).toEqual([createdTodo2, createdTodo1]);
+//
+// 					return client.patch(TODOS_PATH)
+// 						.send({...createdTodo2, text: 'foo3'})
+// 						.expect(200);
+// 				})
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiY2hlY2tPcmRlci50ZXN0LmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiZmlsZTovLy8vaG9tZS9rZXYvSEswMS9ISzAxLVRlc3QvdGVzdC9jaGVja09yZGVyLnRlc3QudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFDQSx1Q0FBdUM7QUFHdkMsTUFBTSxPQUFPLEdBQUcsU0FBUyxDQUFDLHVCQUF1QixDQUFDLENBQUM7QUFFbkQsUUFBUSxDQUFDLDRCQUE0QixFQUFFLEdBQUcsRUFBRTtJQUMxQyxFQUFFLENBQUMsc0JBQXNCLEVBQUUsR0FBRyxFQUFFO1FBQzlCLE1BQU0sQ0FBQyxPQUFPO2FBQ1gsR0FBRyxDQUFDLHdCQUF3QixDQUFDO2FBQzdCLE1BQU0sQ0FBQyxHQUFHLENBQUMsQ0FBQztJQUNqQixDQUFDLENBQUMsQ0FBQztBQUNMLENBQUMsQ0FBQyxDQUFDO0FBRUgsUUFBUSxDQUFDLCtCQUErQixFQUFFLEdBQUcsRUFBRTtJQUM3QyxFQUFFLENBQUMsc0JBQXNCLEVBQUUsR0FBRyxFQUFFO1FBQzlCLE1BQU0sQ0FBQyxPQUFPO2FBQ1gsR0FBRyxDQUFDLDJCQUEyQixDQUFDO2FBQ2hDLE1BQU0sQ0FBQyxHQUFHLENBQUMsQ0FBQztJQUNqQixDQUFDLENBQUMsQ0FBQztBQUNMLENBQUMsQ0FBQyxDQUFDO0FBSUgsUUFBUSxDQUFDLGdDQUFnQyxFQUFFLEdBQUcsRUFBRTtJQUM5QyxVQUFVO0lBQ1YsdUNBQXVDO0lBQ3ZDOzs7Ozs7O01BT0U7SUFDRixFQUFFLENBQUMsMkJBQTJCLEVBQUUsQ0FBQyxJQUFJLEVBQUUsRUFBRTtRQUN2QyxNQUFNLENBQUMsT0FBTyxDQUFDLElBQUksQ0FBQyw0QkFBNEIsQ0FBQzthQUM5QyxJQUFJLENBQUMsSUFBSSxDQUFDLFNBQVMsQ0FBQztZQUNqQixJQUFJLEVBQUUsU0FBUztZQUNmLFdBQVcsRUFBRSxzQ0FBc0M7U0FDcEQsQ0FBQyxDQUNIO2FBQ0EsR0FBRyxDQUFDLFFBQVEsRUFBRSxtQkFBbUIsQ0FBQzthQUNsQyxNQUFNLENBQUMsR0FBRyxDQUFDO2FBQ1gsR0FBRyxDQUFDLENBQUMsR0FBRyxFQUFFLEdBQUcsRUFBRSxFQUFFO1lBQ2hCLE9BQU8sQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLENBQUM7WUFDakIsSUFBSSxFQUFFLENBQUM7UUFDVCxDQUFDLENBQUMsQ0FBQztRQUNILHdCQUF3QjtRQUN4QiwyQkFBMkI7UUFDM0Isc0NBQXNDO1FBQ3RDLE1BQU07SUFHVixDQUFDLENBQUMsQ0FBQztBQUVMLENBQUMsQ0FBQyxDQUFDO0FBRUgsRUFBRTtBQUNGLGlEQUFpRDtBQUNqRCxvREFBb0Q7QUFDcEQsa0NBQWtDO0FBQ2xDLGtDQUFrQztBQUNsQyxpQ0FBaUM7QUFDakMsRUFBRTtBQUNGLHlCQUF5QjtBQUN6QixzREFBc0Q7QUFDdEQscURBQXFEO0FBQ3JELE9BQU87QUFDUCxZQUFZO0FBQ1osZ0RBQWdEO0FBQ2hELHNDQUFzQztBQUN0QyxzQ0FBc0M7QUFDdEMsRUFBRTtBQUNGLDhDQUE4QztBQUM5QyxtREFBbUQ7QUFDbkQsOENBQThDO0FBQzlDLG1EQUFtRDtBQUNuRCxFQUFFO0FBQ0Ysa0RBQWtEO0FBQ2xELFNBQVM7QUFDVCxZQUFZO0FBQ1osb0NBQW9DO0FBQ3BDLHNEQUFzRDtBQUN0RCxFQUFFO0FBQ0YsNERBQTREO0FBQzVELEVBQUU7QUFDRix1Q0FBdUM7QUFDdkMsK0NBQStDO0FBQy9DLHNCQUFzQjtBQUN0QixTQUFTIn0=
