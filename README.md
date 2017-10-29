@@ -1,5 +1,33 @@
 # HK01-Test
 
+## Table of contents
+- [Usage](#usage)
+  - [Make a Payment](#make-a-payment)
+    - [Braintree](#braintree)
+    - [Paypal](#paypal)
+  - [Check order](#check-order)
+- [Installation](#installation)
+- [How to run](#how-to-run)
+- [How to test](#how-to-test)
+- [Structure](#structure)
+- [Source Code](#source-code)
+- [Payback (src/Payback/payback.ts)](#payback-src-payback-payback-ts)
+- [server (src/server.ts)](#server-src-server-ts)
+- [Controllers (src/controllers)](controllers-src-controllers)
+  - [Controller: home](#controller-home)
+  - [Controller: check-order](#controller-check-order)
+  - [Controller: make-payment](#controller-make-payment)
+- [locales (src/locales)](#locales-src-locales)
+- [models (src/models)](#models-src-models)
+- [public (src/public)](#public-src-public)
+- [types (src/types)](#types-src-types)
+- [views (src/views)](#views-src-views)
+- [Checklist](#checklist)
+- [Requirements](#requirements)
+- [Bonus](#bonus)
+- [After-thoughts](#after-thoughts)
+
+
 ## Usage
 ### Make a payment
 On the make-payment page, I have listed some credit card numbers for you to try out with the necessary conditions specified.
@@ -14,7 +42,7 @@ The credit card numbers I listed on the page are extracted from https://develope
 You can repeatedly use the same information to do payments, except you will have to change the `amount` every time, or Braintree will give a `duplicate request` error.
 
 #### Paypal
-Paypal is supposed to be handling `USD`, `EUR` and `AUD` payments. The Paypal REST api has restricted doing credit card payments, so I switched to doing it this way instead:
+Paypal is supposed to be handling `USD`, `EUR` and `AUD` payments. The Paypal REST api has restricted doing credit card payments (https://developer.paypal.com/docs/api/), so I switched to doing it this way instead:
 
 Paypal has something called Direct Payments, but requires pro accounts, I created two in the sandbox to handle `USD` and `AUD` payments. I also tried upgrading two `EUR` accounts (I used Germany and Greece) I created to pro accounts, but Paypal won't allow me. So right now, only `USD` and `AUD` payments can be handles.
 
@@ -60,6 +88,8 @@ sudo npm run start
 ```
 
 This will compile the .ts files and copy the necessary files into the `dist` folder and then watch for any file changes and restart the server.
+
+Then you can go to http://localhost:4000
 
 ## How to test
 Start the server:
@@ -110,10 +140,10 @@ The most important file of the application. It
 ### Controllers (src/controllers)
 There are three controllers: `home`, `check-order` and `make-payment`.
 
-#### home
+#### Controller: home
 Handles the home page, that's it.
 
-#### check-order
+#### Controller: check-order
 Handles
  - `https://rootUrl/chosen_language/check-order/search`
    - renders the page for clients to input searching information
@@ -130,7 +160,7 @@ Mechanism:
 - When all is done, query Braintree/Paypal to verify if transaction still exists
    - if not, delete record in MongoDb
 
-#### make-payment
+#### Controller: make-payment
 Handles
  - `https://rootUrl/chosen_language/make-payment/order`
    - renders the page for clients to input payment information
