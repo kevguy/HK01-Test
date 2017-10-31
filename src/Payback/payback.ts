@@ -225,14 +225,14 @@ export default class Payback {
 
     switch (currency) {
       case 'USD':
-        chosenUsername = process.env.PAYPAL_USD_USERNAME;
-        chosenPassword = process.env.PAYPAL_USD_PASSWORD;
-        chosenSignature = process.env.PAYPAL_USD_SIGNATURE;
+        chosenUsername = process.env.PAYPAL_USD_USERNAME || 'kevlai22-3_api1.uw.edu';
+        chosenPassword = process.env.PAYPAL_USD_PASSWORD || 'TT29JSDCEWZPX2NA';
+        chosenSignature = process.env.PAYPAL_USD_SIGNATURE || 'ALvW1LfJ5RaibyQPxHIpppfeMDgoANSIee2pGQJLCI2Dp5v5FMZ0CEWH';
         break;
       case 'AUD':
-        chosenUsername = process.env.PAYPAL_AUD_USERNAME;
-        chosenPassword = process.env.PAYPAL_AUD_PASSWORD;
-        chosenSignature = process.env.PAYPAL_AUD_SIGNATURE;
+        chosenUsername = process.env.PAYPAL_AUD_USERNAME || 'kevlai22-4_api1.uw.edu';
+        chosenPassword = process.env.PAYPAL_AUD_PASSWORD || 'M7JVGW3K63CT33TL';
+        chosenSignature = process.env.PAYPAL_AUD_SIGNATURE || 'A7LWorWrJcRjmmYMyZ3UG3TC-LgOABbMaf2rN2o2.rFku882NheCuXt1';
         break;
       // case 'EUR':
       //   chosenUsername = process.env.PAYPAL_EUR_USERNAME;
