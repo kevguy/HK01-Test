@@ -1,4 +1,4 @@
-"use strict";
+'use strict';require('ts-jest').install();"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const supertest = require("supertest");
 const request = supertest('http://localhost:4000');

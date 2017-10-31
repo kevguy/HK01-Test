@@ -1,0 +1,349 @@
+'use strict';require('ts-jest').install();"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const Transaction_1 = require("../models/Transaction");
+const uuid = require("uuid");
+const Rx = require("rxjs/Rx");
+const payback_1 = require("../Payback/payback");
+/**
+ * Create Observable/stream that checks if chosen referenceNo
+ * can be found in the Mongo store
+ * @param referenceNo {string} the chosen reference number
+ */
+exports.checkUniqueReferenceNoStream = (referenceNo) => {
+    return Rx.Observable.create((observer) => {
+        Transaction_1.default.findOne({ referenceNo }, (err, existingRecord) => {
+            if (err) {
+                observer.error({ status: 'failure', msg: 'database error' });
+            }
+            if (existingRecord) {
+                observer.next({ status: 'found', msg: 'record exists, choose another referenceNo' });
+            }
+            else {
+                observer.next({ status: 'success', msg: 'safe to save with this referenceNo' });
+            }
+            observer.complete();
+        });
+    });
+};
+/**
+ * Create Observable/stream that saves successful transaction
+ * into MongoDB
+ * @param transaction {any} object that stores all the necessary info for MongoDB
+ * @param transactionInfo {any} object that is returned by Paypal/Braintree
+ * @param referenceNo {string} the referenceNo generated
+ */
+exports.saveTransactionToDbStream = (transaction, transactionInfo, referenceNo) => {
+    let transactionId;
+    transaction.type === 'BRAINTREE' ?
+        transactionId = transactionInfo.transaction.id :
+        transactionId = transactionInfo.TRANSACTIONID;
+    return Rx.Observable.create((observer) => {
+        transaction.save((err) => {
+            if (err) {
+                observer.error({ status: 'failure', msg: 'database error', result: err });
+            }
+            observer.next({ status: 'success', transactionId, transactionInfo, referenceNo });
+            observer.complete();
+        });
+    })
+        .retry(5);
+};
+/**
+ * Create Observable/stream that saves successful transaction
+ * into Redis
+ * @param rawData {any} object that stores the data Redis needs
+ * @param redisClient {any} the redis client for saving contents
+ */
+exports.saveTransactionToCacheStream = (rawData, redisClient) => {
+    console.log(rawData);
+    return Rx.Observable.create((observer) => {
+        // redisClient.set(rawData.referenceNo, JSON.stringify(rawData), function(err: any, reply: any) {
+        redisClient.set(rawData.referenceNo, JSON.stringify(rawData), 'EX', 300, function (err, reply) {
+            if (err) {
+                observer.next({ status: 'failure', msg: "can't save data into cache", result: err });
+            }
+            console.log('data saved into cache');
+            console.log(reply);
+            observer.next({
+                status: 'success',
+                msg: 'record saved to cache',
+                referenceNo: rawData.referenceNo
+            });
+            observer.complete();
+        });
+    });
+};
+/**
+ * Create Observable/stream that saves successful transaction
+ * into Redis and MongoDb
+ * @param transaction {any} object that stores all the necessary info for MongoDB
+ * @param transactionInfo {any} object that is returned by Paypal/Braintree
+ * @param rawData {any} object that stores the data Redis needs
+ * @param referenceNo {string} the referenceNo generated
+ * @param redisClient {any} the redis client for saving contents
+ */
+exports.saveTransactionStream = (transaction, transactionInfo, rawData, referenceNo, redisClient) => {
+    const stream = exports.checkUniqueReferenceNoStream(referenceNo)
+        .flatMap((result) => {
+        if (result.status === 'found') {
+            console.log('check referenceNo in Db failed, referenceNo found in Db');
+            const newReferenceNo = uuid.v1();
+            transaction.referenceNo = newReferenceNo;
+            rawData.referenceNo = newReferenceNo;
+            return exports.saveTransactionStream(transaction, transactionInfo, rawData, newReferenceNo, redisClient);
+        }
+        if (result.status === 'success') {
+            console.log('check referenceNo in Db success');
+            const dbStream = exports.saveTransactionToDbStream(transaction, transactionInfo, referenceNo)
+                .flatMap(() => exports.saveTransactionToCacheStream(rawData, redisClient));
+            return dbStream;
+        }
+    });
+    return stream;
+};
+/**
+ * Create Observable/stream that handles Braintree transaction
+ * and if transaction is successful, transaciton info will be saved into
+ * MongoDB
+ * @param clientData {any} object that contains all the data the client sends
+ */
+exports.createHandleBraintreeSaleRequestStream = ({ name, phone, currency, amount, cardNumber, ccv, expireMonth, expireYear }, redisClient) => {
+    const paybackInit = {
+        braintreeMerchantId: process.env.BRAINTREE_MERCHANT_ID,
+        braintreePublicKey: process.env.BRAINTREE_PUBLIC_KEY,
+        braintreePrivateKey: process.env.BRAINTREE_PRIVATE_KEY
+    };
+    const payback = new payback_1.default(paybackInit);
+    const braintreeSaleRequest = {
+        amount,
+        creditCard: {
+            number: cardNumber,
+            cvv: ccv,
+            expirationDate: expireMonth + '/' + expireYear
+        },
+        options: {
+            submitForSettlement: true
+        }
+    };
+    return payback.createBraintreePaymentStream(braintreeSaleRequest, currency)
+        .flatMap((transactionInfo) => {
+        console.log(`The fuckin transaction id is: ${transactionInfo.transaction.id}`);
+        const referenceNo = uuid.v1();
+        const data = {
+            name: name.toLowerCase(),
+            phone,
+            currency,
+            price: amount,
+            type: 'BRAINTREE',
+            transactionId: transactionInfo.transaction.id,
+            creditCardNo: cardNumber,
+            referenceNo
+        };
+        const transaction = new Transaction_1.default(data);
+        // return saveTransactionToDbStream(transaction, transactionInfo, referenceNo);
+        return exports.saveTransactionStream(transaction, transactionInfo, data, referenceNo, redisClient);
+    });
+};
+/**
+ * Create Observable/stream that handles Paypal transaction
+ * and if transaction is successful, transaciton info will be saved into
+ * MongoDB
+ * @param clientData {any} object that contains all the data the client sends
+ */
+exports.createHandlePaypalSaleRequestStream = ({ name, phone, currency, amount, cardNumber, ccv, expireMonth, expireYear }, redisClient) => {
+    const paybackInit = {
+        braintreeMerchantId: process.env.BRAINTREE_MERCHANT_ID,
+        braintreePublicKey: process.env.BRAINTREE_PUBLIC_KEY,
+        braintreePrivateKey: process.env.BRAINTREE_PRIVATE_KEY
+    };
+    const payback = new payback_1.default(paybackInit);
+    const paypalSaleRequest = {
+        name,
+        amount,
+        creditCardNo: cardNumber,
+        expireMonth,
+        expireYear,
+        ccv,
+        currency
+    };
+    return payback.createPaypalPaymentStream(paypalSaleRequest)
+        .flatMap((transactionInfo) => {
+        console.log(`The fuckin transaction id is: ${transactionInfo.result.TRANSACTIONID}`);
+        const referenceNo = uuid.v1();
+        const data = {
+            name: name.toLowerCase(),
+            phone,
+            currency,
+            price: amount,
+            type: 'PAYPAL',
+            transactionId: transactionInfo.result.TRANSACTIONID,
+            creditCardNo: cardNumber,
+            referenceNo
+        };
+        const transaction = new Transaction_1.default(data);
+        return exports.saveTransactionStream(transaction, transactionInfo, data, referenceNo, redisClient);
+    });
+};
+/**
+ * Query record from the MongoDb database with name and referenceNo
+ * If success, pass along the record
+ * If fail, pass an error message
+ * @param name {string} client name
+ * @param referenceNo {string} referenceNo of the transaction
+ */
+exports.createFindRecordFromMongoStream = (name, referenceNo) => {
+    return Rx.Observable.create((observer) => {
+        Transaction_1.default.findOne({ name: name.toLowerCase(), referenceNo }, 
+        // { referenceNo },
+        (err, existingRecord) => {
+            if (err) {
+                observer.next({ status: 'failure', msg: 'database error' });
+            }
+            if (existingRecord) {
+                observer.next({ status: 'success', result: existingRecord });
+            }
+            else {
+                observer.next({ status: 'failure', msg: 'record not found' });
+            }
+            observer.complete();
+        });
+    });
+};
+/**
+ * Query record from the Redis store with referenceNo
+ * If success, check if the name also matches
+ *  If yes, pass along the record
+ *  If no, delete the record and  pass an error message
+ * If fail, check if the record can be found in MongoDb store
+ *  If yes, save the record into the cache and pass along the record
+ *  If no, pass an error message
+ * @param name {string} client name
+ * @param referenceNo {string} referenceNo of the transaction
+ * @param redisClient {any} the redis client that handles different operaions
+ */
+exports.createFindRecordFromRedisStream = (name, referenceNo, redisClient) => {
+    return Rx.Observable.create((observer) => {
+        redisClient.get(referenceNo, (err, reply) => {
+            if (err) {
+                observer.next({ status: `failure`, msg: `redis cache error` });
+            }
+            else if (reply) {
+                // transaction exists in cache
+                const result = JSON.parse(reply);
+                if (result.name.toLowerCase() !== name.toLowerCase()) {
+                    redisClient.del(referenceNo);
+                    observer.next({ status: `failure`, msg: `no such transaction` });
+                }
+                else {
+                    observer.next({ status: `success`, result });
+                }
+            }
+            else {
+                // transaction doesn't exist in cache --> query mongo
+                console.log(`query database for data`);
+                observer.next({ status: `TBD`, msg: `query database for data` });
+            }
+            observer.complete();
+        });
+    })
+        .flatMap((result) => {
+        console.log(`after checking cache`);
+        console.log(result);
+        if (result.status === 'TBD') {
+            return exports.createFindRecordFromMongoStream(name, referenceNo)
+                .flatMap((result) => {
+                console.log(`after TBD, record is found in mongo`);
+                console.log(result);
+                if (result.status === 'success') {
+                    // save the transaction to cache
+                    return Rx.Observable.create((observer) => {
+                        // set 1 minute expiration
+                        redisClient.set(referenceNo, JSON.stringify(result.result), 'EX', 300, function (err, reply) {
+                            // redisClient.set(referenceNo, JSON.stringify(result.result), function(err: any, reply: any) {
+                            console.log('just saved cache into redis');
+                            console.log(reply);
+                            observer.next(result);
+                            observer.complete();
+                        });
+                    });
+                }
+                return Rx.Observable.of(result);
+            });
+        }
+        return Rx.Observable.of(result);
+    });
+};
+/**
+ * Query record from Braintree with transaction Id
+ * If success, pass along the record
+ * If fail, delte the record in MongoDb
+ * @param transactionId {string} the transaction id
+ */
+exports.createQueryRecordFromBrainTreeStream = (transactionId) => {
+    const paybackInit = {
+        braintreeMerchantId: process.env.BRAINTREE_MERCHANT_ID,
+        braintreePublicKey: process.env.BRAINTREE_PUBLIC_KEY,
+        braintreePrivateKey: process.env.BRAINTREE_PRIVATE_KEY
+    };
+    // check with Braintree to update the record
+    const payback = new payback_1.default(paybackInit);
+    const stream = payback.createBraintreeQueryTransactionStream(transactionId)
+        .catch((result) => {
+        return Rx.Observable.create((observer) => {
+            Transaction_1.default.remove({ transactionId }, (err) => {
+                if (err) {
+                    console.log('record is not in Braintree, and database error');
+                    observer.next({
+                        status: 'failure',
+                        msg: 'record is not in Braintree, and database error'
+                    });
+                }
+                console.log('record is not in Braintree, delete record in Mongo');
+                observer.next({
+                    status: 'success',
+                    msg: 'record is not in Braintree, delete record in Mongo'
+                });
+                observer.complete();
+            });
+        });
+    });
+    return stream;
+};
+/**
+ * Query record from Paypal with transaction Id and chosen currency
+ * If success, pass along the record
+ * If fail, delte the record in MongoDb
+ * @param transactionId {string} the transaction id
+ * @param currency {string} the chosen currency
+ */
+exports.createQueryRecordFromPaypalStream = (transactionId, currency) => {
+    const paybackInit = {
+        braintreeMerchantId: process.env.BRAINTREE_MERCHANT_ID,
+        braintreePublicKey: process.env.BRAINTREE_PUBLIC_KEY,
+        braintreePrivateKey: process.env.BRAINTREE_PRIVATE_KEY
+    };
+    // check with Braintree to update the record
+    const payback = new payback_1.default(paybackInit);
+    const stream = payback.createPaypalQueryTransactionStream(transactionId, currency)
+        .catch((result) => {
+        return Rx.Observable.create((observer) => {
+            Transaction_1.default.remove({ transactionId }, (err) => {
+                if (err) {
+                    console.log('record is not in Paypal, and database error');
+                    observer.next({
+                        status: 'failure',
+                        msg: 'record is not in Paypal, and database error'
+                    });
+                }
+                console.log('record is not in Paypal, delete record in Mongo');
+                observer.next({
+                    status: 'success',
+                    msg: 'record is not in Paypal, delete record in Mongo'
+                });
+                observer.complete();
+            });
+        });
+    });
+    return stream;
+};
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaGVscGVyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiZmlsZTovLy8vaG9tZS9rZXYvSEswMS1UZXN0L3NyYy9jb250cm9sbGVycy9oZWxwZXIudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7QUFBQSx1REFBK0Q7QUFFL0QsNkJBQTZCO0FBQzdCLDhCQUE4QjtBQUU5QixnREFBMEM7QUFFMUM7Ozs7R0FJRztBQUNVLFFBQUEsNEJBQTRCLEdBQUcsQ0FBQyxXQUFtQixFQUFFLEVBQUU7SUFDbEUsTUFBTSxDQUFDLEVBQUUsQ0FBQyxVQUFVLENBQUMsTUFBTSxDQUFDLENBQUMsUUFBdUIsRUFBRSxFQUFFO1FBQ3RELHFCQUFXLENBQUMsT0FBTyxDQUFDLEVBQUUsV0FBVyxFQUFFLEVBQUUsQ0FBQyxHQUFHLEVBQUUsY0FBYyxFQUFFLEVBQUU7WUFDM0QsRUFBRSxDQUFDLENBQUMsR0FBRyxDQUFDLENBQUMsQ0FBQztnQkFBQyxRQUFRLENBQUMsS0FBSyxDQUFDLEVBQUUsTUFBTSxFQUFFLFNBQVMsRUFBRSxHQUFHLEVBQUUsZ0JBQWdCLEVBQUUsQ0FBQyxDQUFDO1lBQUMsQ0FBQztZQUMxRSxFQUFFLENBQUMsQ0FBQyxjQUFjLENBQUMsQ0FBQyxDQUFDO2dCQUNuQixRQUFRLENBQUMsSUFBSSxDQUFDLEVBQUUsTUFBTSxFQUFFLE9BQU8sRUFBRSxHQUFHLEVBQUUsMkNBQTJDLEVBQUUsQ0FBQyxDQUFDO1lBQ3ZGLENBQUM7WUFBQyxJQUFJLENBQUMsQ0FBQztnQkFDTixRQUFRLENBQUMsSUFBSSxDQUFDLEVBQUUsTUFBTSxFQUFFLFNBQVMsRUFBRSxHQUFHLEVBQUUsb0NBQW9DLEVBQUUsQ0FBQyxDQUFDO1lBQ2xGLENBQUM7WUFDRCxRQUFRLENBQUMsUUFBUSxFQUFFLENBQUM7UUFDdEIsQ0FBQyxDQUFDLENBQUM7SUFDTCxDQUFDLENBQUMsQ0FBQztBQUNMLENBQUMsQ0FBQztBQUVGOzs7Ozs7R0FNRztBQUNVLFFBQUEseUJBQXlCLEdBQUcs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

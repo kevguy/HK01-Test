@@ -152,7 +152,7 @@ describe("Payback (Braintree)", () => {
 describe("Payback (Paypal)", () => {
   let paypalTransactionId = '';
 
-  it.only("should be able to handle payment", (done) => {
+  it("should be able to handle payment", (done) => {
 
     const stream = payback.createPaypalPaymentStream(paypalSuccessfulSaleRequest);
     stream.subscribe(

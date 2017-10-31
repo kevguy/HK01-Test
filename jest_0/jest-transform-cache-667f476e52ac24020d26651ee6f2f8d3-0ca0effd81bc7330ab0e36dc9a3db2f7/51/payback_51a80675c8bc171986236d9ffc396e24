@@ -1,0 +1,399 @@
+'use strict';require('ts-jest').install();"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const Rx = require("rxjs/Rx");
+// this won't work, as we need type definition later
+// import * as braintree from 'braintree';
+// this also won't work
+// import braintree = require('braintree');
+const braintree = require('braintree');
+const Paypal = require("paypal-rest-sdk");
+const fetch = require("isomorphic-fetch");
+class Payback {
+    constructor({ braintreeMerchantId, braintreePublicKey, braintreePrivateKey }) {
+        this.braintreeMerchantId = braintreeMerchantId;
+        this.braintreePublicKey = braintreePublicKey;
+        this.braintreePrivateKey = braintreePrivateKey;
+        // this.braintreeGateway = undefined;
+        console.log(`Payback is a bitch`);
+        this.connectBraintree();
+        this.paypal = Paypal;
+    }
+    /**
+     * Makes the connection to braintree
+     */
+    connectBraintree() {
+        this.braintreeGateway = braintree.connect({
+            environment: braintree.Environment.Sandbox,
+            merchantId: this.braintreeMerchantId,
+            publicKey: this.braintreePublicKey,
+            privateKey: this.braintreePrivateKey
+        });
+    }
+    /**
+     * Create the Observable/stream that makes the connection to braintree
+     * @returns {Observable} the stream that does the work
+     */
+    createConnectBraintreeStream() {
+        return Rx.Observable.create((observer) => {
+            this.braintreeGateway = braintree.connect({
+                environment: braintree.Environment.Sandbox,
+                merchantId: this.braintreeMerchantId,
+                publicKey: this.braintreePublicKey,
+                privateKey: this.braintreePrivateKey
+            });
+            observer.next(true);
+            observer.complete();
+        });
+    }
+    /**
+     * Create the Observable/stream that does the payment with Braintree
+     * @param saleRequest {BraintreeSaleRequest} the request-to-be-sent
+     * @param currency {string} the chosen currency
+     * @returns {Observable} the stream that does the work
+     */
+    createBraintreePaymentStream(saleRequest, currency) {
+        // different merchant account for different currencies
+        // https://stackoverflow.com/questions/33909595/how-to-set-currency-format-in-braintree-transaction-sale
+        if (currency === 'HKD') {
+            saleRequest.merchantAccountId = process.env.BRAINTREE_MERCHANT_ACC_ID_HKD;
+        }
+        else if (currency === 'JPY') {
+            saleRequest.merchantAccountId = process.env.BRAINTREE_MERCHANT_ACC_ID_JPY;
+        }
+        return Rx.Observable.create((observer) => {
+            this.braintreeGateway.transaction.sale(saleRequest, (err, result) => {
+                console.log('transaction complete');
+                console.log(result);
+                if (err) {
+                    observer.error(err);
+                }
+                if (result.success) {
+                    observer.next(result);
+                }
+                else {
+                    observer.error(result);
+                }
+                observer.complete();
+            });
+        });
+    }
+    /**
+     * Does the payment with Braintree
+     * @param saleRequest {BraintreeSaleRequest} the request-to-be-sent
+     * @param currency {string} the chosen currency
+     */
+    braintreePayment(saleRequest, currency) {
+        // different merchant account for different currencies
+        // https://stackoverflow.com/questions/33909595/how-to-set-currency-format-in-braintree-transaction-sale
+        if (currency === 'HKD') {
+            saleRequest.merchantAccountId = process.env.BRAINTREE_MERCHANT_ACC_ID_HKD;
+        }
+        else if (currency === 'JPY') {
+            saleRequest.merchantAccountId = process.env.BRAINTREE_MERCHANT_ACC_ID_JPY;
+        }
+        this.braintreeGateway.transaction.sale(saleRequest, (err, result) => {
+            if (err) {
+                console.log(err.name);
+            }
+            if (result.success) {
+                console.log(`braintree success!`);
+                console.log(`transaction info: ${result.transaction}`);
+            }
+        });
+    }
+    /**
+     * Create the Observable/stream that queries the transaction with Braintree
+     * @param transactionId {string} id of the transaction
+     * @returns {Observable} the stream that does the work
+     */
+    createBraintreeQueryTransactionStream(transactionId) {
+        return Rx.Observable.create((observer) => {
+            this.braintreeGateway.transaction.search((search) => {
+                search.id().is(transactionId);
+            }, (err, response) => {
+                if (err) {
+                    observer.error(err);
+                }
+                response.each((err, transaction) => {
+                    observer.next(transaction);
+                });
+                observer.complete();
+            });
+        });
+    }
+    /**
+     * Queries the transaction with Braintree
+     * @param transactionId {string} id of the transaction
+     */
+    braintreeQueryTransaction(transactionId) {
+        this.braintreeGateway.transaction.search((search) => {
+            search.id().is(transactionId);
+        }, (err, response) => {
+            console.log(response);
+            response.each((err, transaction) => {
+                console.log(transaction);
+            });
+        });
+    }
+    /**
+     * Get the necessary info for configuring the Paypal payment request
+     * @param creditCardNo {string} the credit card number
+     * @param currency {string} the chosen currency for payment
+     * @returns {any} an object that has the info of credit card type,
+     *  username, password and signature to be used
+     */
+    getPaypalSettings(creditCardNo, currency) {
+        let cardType = '';
+        let chosenUsername = '';
+        let chosenPassword = '';
+        let chosenSignature = '';
+        const visaRegEx = /^4[0-9]{6,}$/g;
+        const masterRegEx = /^4[0-9]{6,}$/g;
+        const amexRegEx = /^3[47][0-9]{5,}$/g;
+        if (creditCardNo.match(visaRegEx)) {
+            cardType = 'VISA';
+        }
+        else if (creditCardNo.match(masterRegEx)) {
+            cardType = 'MASTER';
+        }
+        else if (creditCardNo.match(amexRegEx)) {
+            cardType = 'AMEX';
+        }
+        else {
+            cardType = 'UNKNOWN';
+        }
+        switch (currency) {
+            case 'USD':
+                chosenUsername = process.env.PAYPAL_USD_USERNAME || 'kevlai22-3_api1.uw.edu';
+                chosenPassword = process.env.PAYPAL_USD_PASSWORD || 'TT29JSDCEWZPX2NA';
+                chosenSignature = process.env.PAYPAL_USD_SIGNATURE || 'ALvW1LfJ5RaibyQPxHIpppfeMDgoANSIee2pGQJLCI2Dp5v5FMZ0CEWH';
+                break;
+            case 'AUD':
+                chosenUsername = process.env.PAYPAL_AUD_USERNAME || 'kevlai22-4_api1.uw.edu';
+                chosenPassword = process.env.PAYPAL_AUD_PASSWORD || 'M7JVGW3K63CT33TL';
+                chosenSignature = process.env.PAYPAL_AUD_SIGNATURE || 'A7LWorWrJcRjmmYMyZ3UG3TC-LgOABbMaf2rN2o2.rFku882NheCuXt1';
+                break;
+        }
+        return { cardType, chosenUsername, chosenPassword, chosenSignature };
+    }
+    /**
+     * Create the Observable/stream that does the payment with Paypal
+     * @param saleRequest {any} the request-to-be-sent
+     * @returns {Observable} the stream that does the work
+     */
+    createPaypalPaymentStream(saleRequest) {
+        const currency = saleRequest.currency;
+        const creditCardNo = saleRequest.creditCardNo;
+        const { cardType, chosenUsername, chosenPassword, chosenSignature } = this.getPaypalSettings(creditCardNo, currency);
+        const payload = {
+            VERSION: '56.0',
+            SIGNATURE: chosenSignature,
+            USER: chosenUsername,
+            PWD: chosenPassword,
+            METHOD: 'DoDirectPayment',
+            PAYMENTACTION: 'Sale',
+            IPADDRESS: '192.168.0.1',
+            AMT: saleRequest.amount,
+            CREDITCARDTYPE: cardType,
+            ACCT: saleRequest.creditCardNo,
+            EXPDATE: `${saleRequest.expireMonth}20${saleRequest.expireYear}`,
+            CVV2: saleRequest.ccv,
+            FIRSTNAME: saleRequest.name,
+            LASTNAME: saleRequest.name,
+            STREET: '1 Main St.',
+            CITY: 'San Jose',
+            STATE: 'CA',
+            ZIP: '95131',
+            COUNTRYCODE: 'US'
+        };
+        // serialize the payload
+        const dataStr = Object.keys(payload).reduce((acc, curr) => {
+            return acc += `&${curr}=${payload[curr]}`;
+        }, '');
+        return Rx.Observable.fromPromise(fetch('https://api-3t.sandbox.paypal.com/nvp', {
+            method: 'POST',
+            body: dataStr
+        }).then(res => res.text())).flatMap((result) => {
+            // extract the transaction ID
+            console.log(`got results form paypal`);
+            const decodedStr = decodeURIComponent(result);
+            const dataArr = decodedStr.split('&');
+            const response = {};
+            dataArr.forEach((item) => {
+                const arr = item.split('=');
+                response[arr[0]] = arr[1];
+            });
+            console.log(response);
+            if (response.TRANSACTIONID && response.ACK === 'Success') {
+                return Rx.Observable.of({ status: 'success', result: response });
+            }
+            return Rx.Observable.throw({ status: 'failure', msg: 'transaction cannot be made', result: response });
+        });
+    }
+    /**
+     * Does the payment with Paypal
+     * @param saleRequest {any} the request-to-be-sent
+     */
+    paypalPayment(saleRequest) {
+        // const configDetails = {
+        //   host: 'api.sandbox.paypal.com',
+        //   port: '',
+        //   client_id: process.env.PAYPAL_CLIENT_ID,
+        //   client_secret: process.env.PAYPAL_CLIENT_SECRET
+        // };
+        //
+        // const paymentRequest = {
+        //   intent: 'sale',
+        //   payer: {
+        //     payment_method: 'credit_card',
+        //     funding_instruments: [{
+        //       credit_card: {
+        //         type: 'Visa',
+        //         number: '4571338849742676',
+        //         expire_month: '11',
+        //         expire_year: '2022',
+        //         cvv2: '000',
+        //         first_name: 'sdvsdvds'
+        //       }
+        //     }]
+        //   },
+        //   transactions: [{
+        //     amount: {
+        //       total: '8.88',
+        //       currency: 'USD'
+        //     }
+        //   }]
+        // };
+        //
+        // this.paypal.payment.create(paymentRequest, configDetails, function(err: any, result: any) {
+        //   if (err) { console.log(err); }
+        //   if (result) {
+        //     console.log(result);
+        //   }
+        // });
+        const currency = saleRequest.currency;
+        const creditCardNo = saleRequest.creditCardNo;
+        const { cardType, chosenUsername, chosenPassword, chosenSignature } = this.getPaypalSettings(creditCardNo, currency);
+        const payload = {
+            VERSION: '56.0',
+            SIGNATURE: chosenSignature,
+            USER: chosenUsername,
+            PWD: chosenPassword,
+            METHOD: 'DoDirectPayment',
+            PAYMENTACTION: 'Sale',
+            IPADDRESS: '192.168.0.1',
+            AMT: saleRequest.amount,
+            CREDITCARDTYPE: cardType,
+            ACCT: saleRequest.creditCardNo,
+            EXPDATE: `${saleRequest.expireMonth}20${saleRequest.expireYear}`,
+            CVV2: saleRequest.ccv,
+            FIRSTNAME: saleRequest.name,
+            LASTNAME: saleRequest.name,
+            STREET: '1 Main St.',
+            CITY: 'San Jose',
+            STATE: 'CA',
+            ZIP: '95131',
+            COUNTRYCODE: 'US'
+        };
+        // serialize the payload
+        const dataStr = Object.keys(payload).reduce((acc, curr) => {
+            return acc += `&${curr}=${payload[curr]}`;
+        }, '');
+        fetch('https://api-3t.sandbox.paypal.com/nvp', {
+            method: 'POST',
+            body: dataStr
+        })
+            .then(res => res.text())
+            .then((result) => {
+            // extract the transaction ID
+            console.log(`got results form paypal`);
+            const decodedStr = decodeURIComponent(result);
+            const dataArr = decodedStr.split('&');
+            const response = {};
+            dataArr.forEach((item) => {
+                const arr = item.split('=');
+                response[arr[0]] = arr[1];
+            });
+            console.log(response);
+        });
+    }
+    /**
+     * Create the Observable/stream that queries the transaction with Paypal
+     * @param transactionId {any} transaction id
+     * @param currency {any} chosen currency
+     * @returns {Observable} the stream that does the work
+     */
+    createPaypalQueryTransactionStream(transactionId, currency) {
+        const { cardType, chosenUsername, chosenPassword, chosenSignature } = this.getPaypalSettings('dummy_number', currency);
+        const payload = {
+            SIGNATURE: chosenSignature,
+            USER: chosenUsername,
+            PWD: chosenPassword,
+            METHOD: 'GetTransactionDetails',
+            VERSION: '78',
+            TransactionID: transactionId
+        };
+        // serialize the payload
+        const dataStr = Object.keys(payload).reduce((acc, curr) => {
+            return acc += `&${curr}=${payload[curr]}`;
+        }, '');
+        return Rx.Observable.fromPromise(fetch('https://api-3t.sandbox.paypal.com/nvp', {
+            method: 'POST',
+            body: dataStr
+        }).then(res => res.text())).flatMap((result) => {
+            // extract the transaction ID
+            console.log(`got results form paypal`);
+            const decodedStr = decodeURIComponent(result);
+            const dataArr = decodedStr.split('&');
+            const response = {};
+            dataArr.forEach((item) => {
+                const arr = item.split('=');
+                response[arr[0]] = arr[1];
+            });
+            console.log(response);
+            if (response.ACK === 'Success') {
+                return Rx.Observable.of({ status: 'success', result: response });
+            }
+            return Rx.Observable.throw({ status: 'failure', msg: 'transaction cannot be retrieved', result: response });
+        });
+    }
+    /**
+     * Queries the transaction with Paypal
+     * @param transactionId {any} transaction id
+     * @param currency {any} chosen currency
+     */
+    paypalQueryTransaction(transactionId, currency) {
+        const { cardType, chosenUsername, chosenPassword, chosenSignature } = this.getPaypalSettings('dummy_number', currency);
+        const payload = {
+            SIGNATURE: chosenSignature,
+            USER: chosenUsername,
+            PWD: chosenPassword,
+            METHOD: 'GetTransactionDetails',
+            VERSION: '78',
+            TransactionID: transactionId
+        };
+        // serialize the payload
+        const dataStr = Object.keys(payload).reduce((acc, curr) => {
+            return acc += `&${curr}=${payload[curr]}`;
+        }, '');
+        fetch('https://api-3t.sandbox.paypal.com/nvp', {
+            method: 'POST',
+            body: dataStr
+        })
+            .then(res => res.text())
+            .then((result) => {
+            // extract the transaction ID
+            console.log(`got results form paypal`);
+            const decodedStr = decodeURIComponent(result);
+            const dataArr = decodedStr.split('&');
+            const response = {};
+            dataArr.forEach((item) => {
+                const arr = item.split('=');
+                response[arr[0]] = arr[1];
+            });
+            console.log(response);
+        });
+    }
+}
+exports.default = Payback;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicGF5YmFjay5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbImZpbGU6Ly8vL2hvbWUva2V2L0hLMDEtVGVzdC9zcmMvUGF5YmFjay9wYXliYWNrLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7O0FBQ0EsOEJBQThCO0FBRTlCLG9EQUFvRDtBQUNwRCwwQ0FBMEM7QUFDMUMsdUJBQXVCO0FBQ3ZCLDJDQUEyQztBQUMzQyxNQUFNLFNBQVMsR0FBRyxPQUFPLENBQUMsV0FBVyxDQUFDLENBQUM7QUFDdkMsMENBQTBDO0FBRTFDLDBDQUEwQztBQWdEMUM7SUFRRSxZQUFZLEVBQ1YsbUJBQW1CLEVBQ25CLGtCQUFrQixFQUNsQixtQkFBbUIsRUFLcEI7UUFDQyxJQUFJLENBQUMsbUJBQW1CLEdBQUcsbUJBQW1CLENBQUM7UUFDL0MsSUFBSSxDQUFDLGtCQUFrQixHQUFHLGtCQUFrQixDQUFDO1FBQzdDLElBQUksQ0FBQyxtQkFBbUIsR0FBRyxtQkFBbUIsQ0FBQztRQUUvQyxxQ0FBcUM7UUFFckMsT0FBTyxDQUFDLEdBQUcsQ0FBQyxvQkFBb0IsQ0FBQyxDQUFDO1FBQ2xDLElBQUksQ0FBQyxnQkFBZ0IsRUFBRSxDQUFDO1FBQ3hCLElBQUksQ0FBQyxNQUFNLEdBQUcsTUFBTSxDQUFDO0lBQ3ZCLENBQUM7SUFFRDs7T0FFRztJQUNILGdCQUFnQjtRQUNkLElBQUksQ0FBQyxnQkFBZ0IsR0FBRyxTQUFTLENBQUMsT0FBTyxDQUFDO1lBQ3hDLFdBQVcsRUFBRSxTQUFTLENBQUMsV0FBVyxDQUFDLE9BQU87WUFDMUMsVUFBVSxFQUFFLElBQUksQ0FBQyxtQkFBbUI7WUFDcEMsU0FBUyxFQUFFLElBQUksQ0FBQyxrQkFBa0I7WUFDbEMsVUFBVSxFQUFFLElBQUksQ0FBQyxtQkFBbUI7U0FDckMsQ0FBQyxDQUFDO0lBQ0wsQ0FBQztJQUVEOzs7T0FHRztJQUNILDRCQUE0QjtRQUMxQixNQUFNLENBQUMsRUFBRSxDQUFDLFVBQVUsQ0FBQyxNQUFNLENBQUMsQ0FB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

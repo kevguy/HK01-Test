@@ -1,0 +1,85 @@
+'use strict';require('ts-jest').install();"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+// import * as supertest from "supertest";
+const redis = require("redis");
+const mongoose = require("mongoose");
+const uuid = require("uuid");
+const Transaction_1 = require("../src/models/Transaction");
+const controllerHelper = require("../src/controllers/helper");
+describe("Database and Cache", () => {
+    let redisClient;
+    const mockReferenceNo = uuid();
+    const mockName = 'john doe';
+    let checkUniqueReferenceNospy;
+    let checkSaveTransactionToDbSpy;
+    let checkSaveTransactionToCacheSpy;
+    // create mock data
+    const data = {
+        name: mockName,
+        phone: '12345678',
+        currency: 'HKD',
+        price: '8.88',
+        type: 'PAYPAL',
+        transactionId: '12345678',
+        creditCardNo: '123456789012',
+        referenceNo: mockReferenceNo
+    };
+    const transaction = new Transaction_1.default(data);
+    const mockTransactionInfo = {
+        transaction: { id: '12345678' },
+        TRANSACTIONID: '12345678'
+    };
+    // setting up spies
+    beforeEach(() => {
+        checkUniqueReferenceNospy = jest.spyOn(controllerHelper, 'checkUniqueReferenceNoStream');
+        checkSaveTransactionToDbSpy = jest.spyOn(controllerHelper, 'saveTransactionToDbStream');
+        checkSaveTransactionToCacheSpy = jest.spyOn(controllerHelper, 'saveTransactionToCacheStream');
+    });
+    // setting up cache database connection
+    beforeAll(() => {
+        redisClient = redis.createClient(18736, 'redis-18736.c14.us-east-1-3.ec2.cloud.redislabs.com', { no_ready_check: true });
+        mongoose.connect('mongodb://kevlai:123456@ds231205.mlab.com:31205/hk01-test');
+    });
+    it("should be able to save transcaction", (done) => {
+        const stream = controllerHelper.saveTransactionStream(transaction, mockTransactionInfo, data, mockReferenceNo, redisClient);
+        stream.subscribe((result) => {
+            expect(result).toEqual(expect.objectContaining({
+                status: expect.any(String)
+            }));
+        }, (err) => { throw err; }, () => {
+            expect(checkUniqueReferenceNospy).toHaveBeenCalled();
+            expect(checkSaveTransactionToDbSpy).toHaveBeenCalled();
+            expect(checkSaveTransactionToCacheSpy).toHaveBeenCalled();
+            done();
+        });
+    });
+    it("should be able to query transaction", (done) => {
+        const stream = controllerHelper.createFindRecordFromRedisStream(mockName, mockReferenceNo, redisClient);
+        stream.subscribe((result) => {
+            expect(result).toEqual(expect.objectContaining({
+                status: expect.any(String)
+            }));
+            expect(result.result).toEqual(expect.objectContaining({
+                referenceNo: expect.any(String),
+                name: expect.any(String)
+            }));
+            expect(result.result.referenceNo).toBe(mockReferenceNo);
+            expect(result.result.name).toBe(mockName.toLowerCase());
+        }, (err) => { throw err; }, () => {
+            done();
+        });
+    });
+    afterEach(() => {
+        checkUniqueReferenceNospy.mockClear();
+        checkSaveTransactionToDbSpy.mockClear();
+        checkSaveTransactionToCacheSpy.mockClear();
+    });
+    afterAll(() => {
+        // delete the record with the associated referenceNo
+        redisClient.del(mockReferenceNo);
+        Transaction_1.default.remove({ referenceNo: mockReferenceNo }, (err) => {
+            throw err;
+        });
+    });
+});
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiZGF0YWJhc2VDaGVjay50ZXN0LmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiZmlsZTovLy8vaG9tZS9rZXYvSEswMS1UZXN0L3Rlc3QvZGF0YWJhc2VDaGVjay50ZXN0LnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7O0FBQ0EsMENBQTBDO0FBRTFDLCtCQUErQjtBQUUvQixxQ0FBcUM7QUFDckMsNkJBQTZCO0FBRTdCLDJEQUFtRTtBQUNuRSw4REFBOEQ7QUFFOUQsUUFBUSxDQUFDLG9CQUFvQixFQUFFLEdBQUcsRUFBRTtJQUNsQyxJQUFJLFdBQVcsQ0FBQztJQUNoQixNQUFNLGVBQWUsR0FBRyxJQUFJLEVBQUUsQ0FBQztJQUMvQixNQUFNLFFBQVEsR0FBRyxVQUFVLENBQUM7SUFDNUIsSUFBSSx5QkFBeUIsQ0FBQztJQUM5QixJQUFJLDJCQUEyQixDQUFDO0lBQ2hDLElBQUksOEJBQThCLENBQUM7SUFFbkMsbUJBQW1CO0lBQ25CLE1BQU0sSUFBSSxHQUFHO1FBQ1gsSUFBSSxFQUFFLFFBQVE7UUFDZCxLQUFLLEVBQUUsVUFBVTtRQUNqQixRQUFRLEVBQUUsS0FBSztRQUNmLEtBQUssRUFBRSxNQUFNO1FBQ2IsSUFBSSxFQUFFLFFBQVE7UUFDZCxhQUFhLEVBQUUsVUFBVTtRQUN6QixZQUFZLEVBQUUsY0FBYztRQUM1QixXQUFXLEVBQUUsZUFBZTtLQUM3QixDQUFDO0lBQ0YsTUFBTSxXQUFXLEdBQVEsSUFBSSxxQkFBVyxDQUFDLElBQUksQ0FBQyxDQUFDO0lBQy9DLE1BQU0sbUJBQW1CLEdBQUc7UUFDMUIsV0FBVyxFQUFFLEVBQUUsRUFBRSxFQUFFLFVBQVUsRUFBRTtRQUMvQixhQUFhLEVBQUUsVUFBVTtLQUMxQixDQUFDO0lBRUYsbUJBQW1CO0lBQ25CLFVBQVUsQ0FBQyxHQUFHLEVBQUU7UUFDZCx5QkFBeUIsR0FBRyxJQUFJLENBQUMsS0FBSyxDQUFDLGdCQUFnQixFQUFFLDhCQUE4QixDQUFDLENBQUM7UUFDekYsMkJBQTJCLEdB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
